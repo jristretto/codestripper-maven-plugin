@@ -28,7 +28,7 @@ public class StrippedCodeValidatorTest extends StrippedCodeValidator {
     MavenProject mproject;
 
     @BeforeEach
-    void setup() throws DependencyResolutionRequiredException, IOException {
+    public void setup() throws DependencyResolutionRequiredException, IOException {
         List<String> elements = Files.lines( Path.of( "testclasspath.txt" ) )
                 .toList();
         lenient().when( mproject.getCompileClasspathElements() )
@@ -43,9 +43,9 @@ public class StrippedCodeValidatorTest extends StrippedCodeValidator {
     public void testGetSourceFiles() {
         String pck = getClass().getPackage().getName();
         Path sourceDir = Path.of( "src" );
-        String[] sourceFiles = this.getSourceFiles( sourceDir );
-        System.out.println( "sourceFiles = " + Arrays.toString( sourceFiles ) );
-        assertThat( sourceFiles ).contains(
+        String[] srcFiles = getSourceFiles( sourceDir );
+        System.out.println("sourceFiles = " + Arrays.toString( srcFiles ) );
+        assertThat(srcFiles ).contains(
                 "src/main/java/"
                         + pck.replaceAll("\\.", "/")
                         + "/StrippedCodeValidator.java",
@@ -74,7 +74,6 @@ public class StrippedCodeValidatorTest extends StrippedCodeValidator {
     @Test @DisplayName( "run the compiler" )
     public void testCompilerRun() throws IOException {
 
-        io.github.jrsitretto.codestripper.CodeStripper.main( new String[]{} );
         ThrowableAssert.ThrowingCallable code = () -> {
             this.execute();
         };

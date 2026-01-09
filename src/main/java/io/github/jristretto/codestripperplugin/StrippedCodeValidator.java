@@ -36,18 +36,18 @@ import org.apache.maven.project.MavenProject;
  *
  * @author Pieter van den Hombergh {@code <pieter.van.den.hombergh@gmail.com>}
  */
-@Mojo( name = "validate-stripped-code",
-        defaultPhase = LifecyclePhase.PACKAGE )
+@Mojo(name = "validate-stripped-code",
+        defaultPhase = LifecyclePhase.PACKAGE)
 public class StrippedCodeValidator extends AbstractMojo {
 
-    @Parameter( defaultValue = "${project}", required = true, readonly = true )
+    @Parameter(defaultValue = "${project}", required = true, readonly = true)
     MavenProject project;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
 
-        log.info( "start stripped code validation" );
+        log.info("start stripped code validation");
 
         /*
          make compile outdir in temp
@@ -55,75 +55,66 @@ public class StrippedCodeValidator extends AbstractMojo {
          for test compile,
          */
         try {
-            validate( log );
-        } catch ( IOException | InterruptedException | DependencyResolutionRequiredException ex ) {
-            getLog().error( ex.getMessage() );
+            validate(log);
+        } catch (IOException | InterruptedException | DependencyResolutionRequiredException ex) {
+            getLog().error(ex.getMessage());
         }
     }
 
-    Pattern problematicFile = Pattern.compile( "(?<file>.*):\\d+: error:.*" );
+    Pattern problematicFile = Pattern.compile("(?<file>.*):\\d+: error:.*");
 
     void validate(Log log) throws InterruptedException, DependencyResolutionRequiredException, IOException {
         outDir = makeOutDir();
-        Path srcDir = Path.of( "target", "stripper-out", "src" );
-        String[] args = makeCompilerArguments( srcDir, outDir,
-                classPathElements() );
-//        String cmdLine = Arrays.stream( args ).collect( joining( " " ) );
-//        getLog().info( "cmdLine = " + cmdLine );
-        ProcessBuilder pb = new ProcessBuilder( args );
+        Path srcDir = Path.of("target", "stripper-out", "src");
+        String[] args = makeCompilerArguments(srcDir, outDir,
+                classPathElements());
+        ProcessBuilder pb = new ProcessBuilder(args);
         getLog()
-                .info( "validating " + validatedClassCount + " stripped classes" );
+                .info("validating " + validatedClassCount + " stripped classes");
 
-//        for ( String sourceFile : sourceFiles ) {
-//            log.info( "\t" + sourceFile );
-//        }
-//        pb = pb.directory( Path.of( "target", "stripper-out" ).toFile() );
-//        File directory = pb.directory();
-//        log.info( "working directory = " + directory );
         Process process = pb.start();
         BufferedReader reader
-                = new BufferedReader( new InputStreamReader(
-                        process.getErrorStream() )
-                //                        process                        .getInputStream() )
+                = new BufferedReader(new InputStreamReader(
+                        process.getErrorStream())
                 );
         String line;
         List<String> compilerOutput = new ArrayList<>();
         final Set<String> problematicFiles = new HashSet<>();
-        while ( ( line = reader.readLine() ) != null ) {
-            Matcher matcher = problematicFile.matcher( line );
-            if ( matcher.matches() ) {
-                problematicFiles.add( matcher.group( "file" ) );
+        while ((line = reader.readLine()) != null) {
+            Matcher matcher = problematicFile.matcher(line);
+            if (matcher.matches()) {
+                problematicFiles.add(matcher.group("file"));
             }
-            compilerOutput.add( line );
+            compilerOutput.add(line);
         }
 
         int exitCode = process.waitFor();
-        if ( compilerOutput.isEmpty() ) {
-            getLog().info( "all stripped files passed compiler test" );
+        if (compilerOutput.isEmpty()) {
+            getLog().info("all stripped files passed compiler test");
         } else {
             getLog().info(
-                    "\033[31;1mCompiling the stipped files causes some compiler errors\033[m" );
-            Arrays.stream( sourceFiles )
-                    .forEach( l -> {
-                        if ( problematicFiles.contains( l ) ) {
-                            log.error( "\033[1;31m" + l + "\033[m" );
+                    "\033[31;1mCompiling the stipped files causes some compiler errors\033[m");
+            Arrays.stream(sourceFiles)
+                    .forEach(l -> {
+                        if (problematicFiles.contains(l)) {
+                            log.error("\033[1;31m" + l + "\033[m");
                         } else {
-                            log.info( "\033[1m" + l + "\033[m" );
+                            log.info("\033[1m" + l + "\033[m");
                         }
-                    } );
+                    });
 
-            for ( String s : compilerOutput ) {
-                log.error( s );
+            for (String s : compilerOutput) {
+                log.error(s);
             }
         }
 
-        log.info( "exited validate-stripped-code with exit code " + exitCode );
+        log.info("exited validate-stripped-code with exit code " + exitCode);
     }
 
     Path outDir;
 
     Path makeOutDir() throws IOException {
-        outDir = Files.createTempDirectory( "cs-target" );
+        outDir = Files.createTempDirectory("cs-target");
         outDir.toFile().deleteOnExit();
         return outDir;
     }
@@ -134,23 +125,20 @@ public class StrippedCodeValidator extends AbstractMojo {
 
         List<String> testClasspathElements = project.getTestClasspathElements();
         Set<String> result = new LinkedHashSet<>();
-        result.addAll( compileClasspathElements );
-        result.addAll( testClasspathElements );
-        result.forEach( l -> getLog().info( "classpath element " + l ) );
+        result.addAll(compileClasspathElements);
+        result.addAll(testClasspathElements);
+        result.forEach(l -> getLog().info("classpath element " + l));
         return result;
     }
 
-    static String pathSep = System.getProperty( "path.separator" );
-    static String fileSep = System.getProperty( "file.separator" );
+    static String pathSep = System.getProperty("path.separator");
+    static String fileSep = System.getProperty("file.separator");
 
     String[] makeCompilerArguments(Path sourceDir, Path outDir,
             Collection<String> classpathElements) throws
             DependencyResolutionRequiredException {
-        String[] sources = getSourceFiles( sourceDir );
+        String[] sources = getSourceFiles(sourceDir);
         validatedClassCount = sources.length;
-//        String compileClassPath = classpathElements
-//                .stream()
-//                .collect( joining( pathSep ) );
         String compileClassPath = getSneakyClassPath();
 
         String[] opts = {
@@ -158,9 +146,9 @@ public class StrippedCodeValidator extends AbstractMojo {
             "-p", compileClassPath,
             "-sourcepath", "src/main/java" + pathSep + "src/test/java",
             "-cp", compileClassPath,
-            "-d", outDir.toString() };
-        String[] allOpts = Arrays.copyOf( opts, opts.length + sources.length );
-        System.arraycopy( sources, 0, allOpts, opts.length, sources.length );
+            "-d", outDir.toString()};
+        String[] allOpts = Arrays.copyOf(opts, opts.length + sources.length);
+        System.arraycopy(sources, 0, allOpts, opts.length, sources.length);
         return allOpts;
     }
 
@@ -168,23 +156,25 @@ public class StrippedCodeValidator extends AbstractMojo {
 
     boolean isJavaFile(Path p) {
         return p.getFileName().toString().endsWith(
-                ".java" );
+                ".java");
     }
 
     String[] sourceFiles = null;
 
     String[] getSourceFiles(Path startDir) {
-        if ( null == sourceFiles ) {
-            String[] result = null;
-            try ( Stream<Path> stream = Files.walk( startDir,
-                    Integer.MAX_VALUE ) ) {
+        if (null == sourceFiles) {
+            String[] result;
+            try (Stream<Path> stream = Files.walk(startDir,
+                    Integer.MAX_VALUE)) {
                 result = stream
-                        .filter( path -> !Files.isDirectory( path ) )
-                        .filter( this::isJavaFile )
-                        .map( Path::toString )
-                        .toArray( String[]::new );
-            } catch ( IOException ignored ) {
+                        .filter(path -> !Files.isDirectory(path))
+                        .filter(this::isJavaFile)
+                        .map(Path::toString)
+                        .toArray(String[]::new);
+            } catch (IOException ioex) {
+                result = new String[0];
             }
+
             sourceFiles = result;
         }
         return sourceFiles;
@@ -197,22 +187,22 @@ public class StrippedCodeValidator extends AbstractMojo {
     String getSneakyClassPath() {
         String result = "";
         try {
-            ProcessBuilder pb = new ProcessBuilder( "mvn",
-                    "dependency:build-classpath" );
+            ProcessBuilder pb = new ProcessBuilder("mvn",
+                    "dependency:build-classpath");
             Process process = pb.start();
             BufferedReader reader
                     = new BufferedReader(
-                            new InputStreamReader( process.getInputStream() ) );
+                            new InputStreamReader(process.getInputStream()));
 
             String line;
-            while ( ( line = reader.readLine() ) != null ) {
-                if ( !line.startsWith( "[INFO]" ) ) {
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith("[INFO]")) {
                     result += line;
                 }
             }
             int exitCode = process.waitFor();
-        } catch ( IOException | InterruptedException ex ) {
-            getLog().error( ex );
+        } catch (IOException | InterruptedException ex) {
+            getLog().error(ex);
         }
         return result;
     }
@@ -220,7 +210,7 @@ public class StrippedCodeValidator extends AbstractMojo {
     String getClassPath(MavenProject project) {
 
         return project.getArtifacts().stream()
-                .map( a -> a.getFile().getPath() )
-                .collect( joining( pathSep ) );
+                .map(a -> a.getFile().getPath())
+                .collect(joining(pathSep));
     }
 }

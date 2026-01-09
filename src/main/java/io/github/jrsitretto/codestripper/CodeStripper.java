@@ -18,13 +18,13 @@ import io.github.jristretto.linesprocessor.ProcessorFactory;
  */
 public class CodeStripper {
 
-    public final void strip(String root) throws IOException {
+    public final void strip(String projectRoot) throws IOException {
 //        var out = Path.of( "target/out" );
         var target = Path.of( "target" );
         var dotgit = Path.of( ".git" );
         try ( Zipper solution = new Zipper( "target/solution.zip" ); //
                   Zipper assignment = new Zipper( "target/assignment.zip" ); ) {
-            Files.walk( Path.of( root ), Integer.MAX_VALUE )
+            Files.walk( Path.of( projectRoot ), Integer.MAX_VALUE )
                     .filter( f -> !Files.isDirectory( f ) )
                     //                .filter( f -> !f.startsWith( out ) )
                     .filter( f -> !f.startsWith( target ) )
