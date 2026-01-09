@@ -75,7 +75,7 @@ class Zipper implements AutoCloseable {
         }
         ensureOpen();
         try ( FileInputStream fis = new FileInputStream( source.toFile() ); ) {
-            ZipEntry ze = new ZipEntry( entryName.toString().toString() );
+            ZipEntry ze = new ZipEntry( entryName.toString() );
             zos.putNextEntry( ze );
             byte[] buffer = new byte[ 8192 ];
             try {
